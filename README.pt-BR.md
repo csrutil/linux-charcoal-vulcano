@@ -6,7 +6,7 @@ A `master` compila o kernel Charcoal para o **SteamOS stable atual**. O SteamOS 
 
 ## Instalação da Latest
 
-Atualize o SteamOS stable e execute no Modo Desktop. No Steam Deck, habilite IOMMU na BIOS e reinicie antes.
+Atualize o SteamOS stable e execute no Modo Desktop.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zarpon/linux-charcoal-vulcano/master/install-charcoal.sh -o install-charcoal.sh && bash install-charcoal.sh
@@ -38,9 +38,9 @@ Assim, a mudança do stable para Linux 7.3 ou superior é descoberta automaticam
 
 Descobrir um kernel novo não pula a compatibilidade dos patches. Todas as famílias continuam obrigatórias. O resolvedor escolhe primeiro a versão mais recente de cada projeto e prefere sua variante nativa da série detectada; portes/adaptadores mantêm hashes e origem. Os portes existentes passam por verificação contra a nova fonte antes da compilação. Se os bytes upstream ou APIs mudarem de forma incompatível, o build falha para correção, sem retirar patches, escolher uma versão antiga do projeto ou publicar um kernel incompleto. Consulte [PATCH-SOURCES.md](PATCH-SOURCES.md).
 
-A pilha preserva BORE/coexistência sched_ext, POC Selector, ADIOS/elevator padrão, LRU CAST, NAP, ZRAM-IR, AMD P-State EPP boost, otimizações CPU/O3, Clear/Zen, compatibilidade DKMS/Clang/Polly, firmware/wireless, Ryzen SMU, drivers de controles e patches locais Van Gogh/IOMMU. A ordem de aplicação é mantida. `6.16.12-bore-6.8.0-final.patch` permanece como referência de compatibilidade; o BORE atual é selecionado dinamicamente. Os arquivos 6.18 substituídos dão lugar às implementações 7.2 mantidas.
+A pilha preserva BORE/coexistência sched_ext, POC Selector, LRU CAST, AMD P-State EPP boost, otimizações CPU/O3, Clear/Zen, compatibilidade DKMS/Clang, registro do nome de firmware, Ryzen SMU e um patch local Van Gogh de frequência da CPU (máximo soft de 4,0 GHz). O limite de potência Van Gogh fica no padrão Valve: 29 W sustentado / 30 W rápido. A ordem de aplicação é mantida. `6.16.12-bore-6.8.0-final.patch` permanece como referência de compatibilidade; o BORE atual é selecionado dinamicamente. Os arquivos 6.18 substituídos dão lugar às implementações 7.2 mantidas.
 
-Funcionalidades já presentes na fonte Valve continuam contabilizadas pelo resolvedor, sem reaplicação duplicada. Patches antigos fsync opcode-31, C23/libbpf, Bluetooth SSP e Qualcomm ath11k upstream já ausentes da `kernel-7.2` não são reintroduzidos. O `patch-lock.json` validado registra versões, origens, hashes e funcionalidades atendidas pelo upstream.
+Funcionalidades já presentes na fonte Valve continuam contabilizadas pelo resolvedor, sem reaplicação duplicada. Patches antigos fsync opcode-31, C23/libbpf, Bluetooth SSP e Qualcomm ath11k upstream já ausentes da `kernel-7.2` não são reintroduzidos. Os patches OpenWrt minstrel_ht e ath11k remapped-CE foram removidos: os dois drivers Wi-Fi do Steam Deck (rtw88, ath11k PCI) usam controle de taxa no firmware, e a mudança remapped-CE afeta apenas dispositivos ath11k AHB. ZRAM-IR, ADIOS, NAP, Clang Polly, IOMMU PerfOpt, o limite de 50 W Van Gogh e os drivers externos xone/xpadneo/xpad-noone também foram removidos. São usados os governadores de ociosidade padrão da Valve e os drivers Xbox `xpad`/`xbox_gip` do kernel. O `patch-lock.json` validado registra versões, origens, hashes e funcionalidades atendidas pelo upstream.
 
 ## Compilação e publicação
 
@@ -57,7 +57,6 @@ Preparação local com Python 3, Bash e Git:
 ```bash
 python3 automation/prepare-pkgbuild-7.2.py --write PKGBUILD
 python3 automation/prepare-steamos-stable.py --fetch-config
-python3 automation/resolve-controller-drivers.py --write
 python3 automation/resolve-latest-patches-7.2-policy.py --overrides logs/patch-source-overrides-stable.json --write
 python3 automation/validate-patch-lock.py --manifest logs/patch-sources-7.2.json --overrides logs/patch-source-overrides-stable.json
 ```
@@ -69,10 +68,6 @@ Alguns nomes de helpers mantêm `7.2` por compatibilidade; a entrada stable forn
 O ZSTD por software da Crypto API usa por padrão o **nível 1** (ZSTD_DEF_LEVEL=1), utilizado pelo zswap com backend genérico. O código existente calcula automaticamente parâmetros e memória de trabalho; o limite da janela e o descompressor permanecem iguais. O build confere a fonte preparada e publica zstd-crypto-level.txt e zstd-crypto-source.sha256. Outros consumidores desse codec genérico também recebem o novo padrão. O modo fast próprio do ZRAM-IR e os backends de hardware Intel QAT mantêm o comportamento existente.
 
 
-O3 e o perfil de jogos/memória Charcoal continuam ativos. A instalação desabilita persistentemente ZRAM/serviços, habilita ZSTD zswap com pool de **35% da RAM**, shrinker ativo e swapfile em `/home` com **100% da RAM**. O suporte ZRAM-IR permanece disponível no kernel. Consulte [SWAP.md](SWAP.md).
+O3 e o perfil de jogos/memória Charcoal continuam ativos. A instalação desabilita persistentemente ZRAM/serviços, habilita ZSTD zswap com pool de **35% da RAM**, shrinker ativo e swapfile em `/home` com **100% da RAM**. Consulte [SWAP.md](SWAP.md).
 
 Permanecem `vm.vfs_cache_pressure=100`, `vm.dirty_background_ratio=2` e `vm.dirty_ratio=5`, preservando os padrões do LRU CAST. `CONFIG_ZEN_INTERACTIVE` controla os ajustes existentes de RCU assíncrono evdev e seleção schedutil P-State, sem importar outros padrões Zen de memória/scheduler.
-
-IOMMU PerfOpt usa automaticamente o caminho DMA identity otimizado em GPUs integradas AMD elegíveis. Enquanto ativo, pula ATS, PRI, PASID e SVA/GCR3 naquele dispositivo, reduzindo contenção DMA. O resultado depende de hardware/carga; não há ganho percentual garantido nem opção de desativação em execução `amdgpu.iommu_perfopt`.
-
-Cada build busca as ferramentas NAP mais recentes e registra commit/hashes. O aprendizado persiste entre reinicializações, com salvamento a cada 30 minutos. Inclui `napctl` e `/usr/share/nap/napviz.html`, gerado a partir do modelo do kernel compilado. Consulte [NAP-TOOLS.md](NAP-TOOLS.md).

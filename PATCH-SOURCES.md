@@ -12,4 +12,4 @@ Fontes de commit único ou listas de discussão são registradas por seus bytes 
 
 `logs/patch-lock.json` registra versões, commits, caminhos, URLs, origens, SHA-256 e tamanho de componentes principais e auxiliares. `logs/steamos-stable-source.json` registra a imagem stable e a fonte exata. O build valida ambos antes de publicar a Latest.
 
-Patches locais Van Gogh e IOMMU permanecem versionados. O antigo overlay BORE 6.16 é preservado como referência de compatibilidade; não substitui a seleção do BORE upstream atual. As implementações 6.18 substituídas foram removidas da árvore corrente e continuam recuperáveis no histórico Git.
+O patch local Van Gogh de frequência da CPU permanece versionado. O antigo overlay BORE 6.16 é preservado como referência de compatibilidade; não substitui a seleção do BORE upstream atual. As implementações 6.18 substituídas foram removidas da árvore corrente e continuam recuperáveis no histórico Git.

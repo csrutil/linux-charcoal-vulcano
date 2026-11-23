@@ -1,12 +1,15 @@
 post_install() {
-  /usr/lib/nap/configure-services install || return
   /usr/lib/gaming-swap/configure
+}
+
+pre_upgrade() {
+  # Older packages shipped NAP and enabled its units. Disable them while the
+  # old helper is still installed, before pacman removes the unit files.
+  if [ -x /usr/lib/nap/configure-services ]; then
+    /usr/lib/nap/configure-services remove || true
+  fi
 }
 
 post_upgrade() {
   post_install
-}
-
-pre_remove() {
-  /usr/lib/nap/configure-services remove
 }

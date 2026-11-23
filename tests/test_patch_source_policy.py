@@ -26,8 +26,6 @@ spec.loader.exec_module(resolver)
 
 LOCAL_ONLY_PATCHES = {
     "vangogh_allow_higher_cpu_freq.patch",
-    "vangogh_higher_max_power_limit.patch",
-    "iommu-perfopt-consolidado-v3.patch",
     "zstd-crypto-default-level-1.patch",
 }
 
@@ -50,10 +48,49 @@ class PatchSourcePolicyTests(unittest.TestCase):
         self.assertNotIn("ath11k_disable_key", {item["name"] for item in components()})
         self.assertNotIn("latest-ath11k-disable-key.patch", source_lines(PKGBUILD))
         self.assertNotIn("git.codelinaro.org", json.dumps(MANIFEST))
-        self.assertIn("latest-ath11k-remapped-ce.patch", source_lines(PKGBUILD))
         names = {item["name"] for item in components()}
-        self.assertIn("ath11k_remapped_ce", names)
         self.assertFalse({"c23_libbpf", "ath11k_upstream", "bt_ssp", "fsync"} & names)
+
+    def test_trimmed_deck_families_are_not_resolved_or_applied(self) -> None:
+        # Deck Wi-Fi (rtw88, ath11k PCI) uses firmware rate control, so
+        # mac80211 minstrel_ht never runs; remapped-CE only affects ath11k AHB.
+        # ZRAM-IR, ADIOS, NAP, Clang Polly, IOMMU PerfOpt, the 50 W power
+        # limit and the out-of-tree Xbox drivers were removed by choice.
+        names = {item["name"] for item in components()}
+        self.assertFalse({
+            "minstrel_frac", "minstrel_fluctuation", "minstrel_downgrade",
+            "ath11k_remapped_ce", "zram_ir", "adios", "adios_default", "nap",
+            "clang_polly",
+        } & names)
+        sources = source_lines(PKGBUILD)
+        for removed in (
+            "latest-minstrel-frac.patch", "latest-minstrel-fluctuation.patch",
+            "latest-minstrel-downgrade.patch", "latest-ath11k-remapped-ce.patch",
+            "latest-zram-ir.patch", "latest-adios.patch", "latest-adios-default.patch",
+            "latest-nap.patch", "latest-clang-polly.patch",
+            "iommu-perfopt-consolidado-v3.patch", "vangogh_higher_max_power_limit.patch",
+            "nap-tools.tar.gz", "xpad-noone.diff", "charcoal.conf",
+        ):
+            self.assertNotIn(removed, sources)
+        self.assertFalse(any(
+            repo in line for line in sources
+            for repo in ("/xone.git", "/xpad-noone.git", "/xpadneo.git")
+        ))
+
+    def test_stock_kernel_drivers_replace_removed_out_of_tree_choices(self) -> None:
+        # Without NAP and xpad-noone, Valve's idle governors and Xbox drivers
+        # must not stay disabled by the Charcoal fragment.
+        fragment = (ROOT / "config-charcoal").read_text(encoding="utf-8")
+        for option in (
+            "CONFIG_CPU_IDLE_GOV_MENU=n", "CONFIG_CPU_IDLE_GOV_TEO=n",
+            "CONFIG_CPU_IDLE_GOV_NAP", "CONFIG_JOYSTICK_XPAD=n",
+            "CONFIG_JOYSTICK_XBOX_GIP=n", "CONFIG_POLLY_CLANG",
+        ):
+            self.assertNotIn(option, fragment)
+        self.assertIn(
+            "+\tsmu->cpu_default_soft_max_freq = 4000;",
+            (ROOT / "vangogh_allow_higher_cpu_freq.patch").read_text(encoding="utf-8"),
+        )
 
     def test_source_and_checksum_arrays_remain_aligned(self) -> None:
         start, end = resolver.find_array_bounds(PKGBUILD, "sha256sums")

@@ -10,9 +10,9 @@ from pathlib import Path
 
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 PATCH_LABELS = {
-    "adios": "ADIOS", "bore": "BORE", "bore_sched_ext_coexistence": "BORE sched_ext coexistence",
-    "lru_cast": "LRU CAST", "nap": "NAP", "poc_selector": "POC Selector",
-    "zram_ir": "ZRAM-IR", "cpu_optimizations": "CPU optimizations",
+    "bore": "BORE", "bore_sched_ext_coexistence": "BORE sched_ext coexistence",
+    "lru_cast": "LRU CAST", "poc_selector": "POC Selector",
+    "cpu_optimizations": "CPU optimizations",
     "zen_interactive": "Zen Interactive", "reflex": "REFLEX",
 }
 

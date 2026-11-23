@@ -22,14 +22,10 @@ UNUSED_616_PATCHES = {
 }
 RETAINED_616_OVERLAY = "6.16.12-bore-6.8.0-final.patch"
 ACTIVE_COMPONENTS = {
-    "latest-adios.patch",
-    "latest-adios-default.patch",
     "latest-bore.patch",
     "latest-bore-sched-ext-coexistence-fix.patch",
     "latest-lru_cast.patch",
-    "latest-nap.patch",
     "latest-poc-selector.patch",
-    "latest-zram-ir.patch",
     "latest-amd-pstate-epp-boost-01-kernel-doc.patch",
     "latest-amd-pstate-epp-boost-02-cache-order.patch",
     "latest-amd-pstate-epp-boost-03-core.patch",
@@ -54,15 +50,6 @@ class UnusedPatchCleanupTests(unittest.TestCase):
         pkgbuild = (ROOT / "PKGBUILD").read_text(encoding="utf-8")
         missing = sorted(name for name in ACTIVE_COMPONENTS if name not in pkgbuild)
         self.assertFalse(missing, missing)
-        zram_patch = ROOT / "0001-linux7.2-zram-ir-1.2.patch"
-        self.assertTrue(zram_patch.is_file())
-        zram_text = zram_patch.read_text(encoding="utf-8")
-        for expected in (
-            "sysctl_zram_recomp_immediate = 1",
-            '"zram_recomp_immediate"',
-            "params->level = -1",
-        ):
-            self.assertIn(expected, zram_text)
 
 
 if __name__ == "__main__":

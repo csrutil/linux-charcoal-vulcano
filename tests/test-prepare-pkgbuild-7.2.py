@@ -34,14 +34,12 @@ _nepbase=linux-neptune-616
 _tag=6.16.12-valve27
 source=(
   config
-  latest-adios.patch
-  latest-adios-default.patch
   latest-bore.patch
   latest-bore-sched-ext-coexistence-fix.patch
   latest-zen-01.patch
   latest-zen-02.patch
   latest-poc-selector.patch
-  iommu-perfopt-consolidado-v3.patch
+  zstd-crypto-default-level-1.patch
 )
 prepare() {
   if [[ $src == latest-poc-selector.patch ]]; then :; fi
@@ -122,7 +120,7 @@ class TransformTests(unittest.TestCase):
         result = MODULE.transform(SAMPLE)
         MODULE.validate(result)
         self.assertIn("pkgbase=linux-charcoal-72", result)
-        self.assertEqual(result.count("iommu-perfopt-consolidado-v3.patch"), 1)
+        self.assertEqual(result.count("zstd-crypto-default-level-1.patch"), 1)
         positions = [result.index(name) for name in MODULE.PATCH_ORDER]
         self.assertEqual(positions, sorted(positions))
 
@@ -188,7 +186,7 @@ class TransformTests(unittest.TestCase):
 
     def test_missing_patch_is_rejected(self) -> None:
         with self.assertRaisesRegex(MODULE.TransformError, "missing patch"):
-            MODULE.transform(SAMPLE.replace("  latest-adios.patch\n", ""))
+            MODULE.transform(SAMPLE.replace("  latest-bore.patch\n", ""))
 
 
 if __name__ == "__main__":
