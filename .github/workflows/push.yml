@@ -57,14 +57,6 @@ jobs:
           set -Eeuo pipefail
           python3 automation/run-local-tests.py
 
-      - name: Resolve latest controller drivers
-        run: |
-          set -Eeuo pipefail
-          python3 tests/test-controller-driver-resolution.py -v
-          python3 automation/resolve-controller-drivers.py --write | tee controller-driver-resolution.log
-          mv controller-driver-resolution.log logs/controller-driver-resolution.log
-          bash -n PKGBUILD
-
       - name: Resolve official SteamOS stable source and Arch config
         run: |
           set -Eeuo pipefail
@@ -97,10 +89,6 @@ jobs:
           grep -Fxq "_nepbase=linux-neptune-${PKGBASE#linux-charcoal-}" PKGBUILD
           grep -Fq 'CONFIG_RTW89_USB=m' config-neptune
           grep -Fq 'CONFIG_ZSWAP_DEFAULT_ON=y' config-neptune
-          grep -Fq 'CONFIG_ZRAM_MULTI_COMP=y' config-charcoal
-          grep -Fq 'CONFIG_ZRAM_DEF_COMP_LZ4=y' config-charcoal
-          grep -Fq 'params->level = -1;' latest-zram-ir.patch
-          grep -Fq 'sysctl_zram_recomp_immediate = 1' latest-zram-ir.patch
           python3 - <<'PY'
           import json, os
           from pathlib import Path
@@ -110,8 +98,6 @@ jobs:
               'latest-bore.patch',
               'latest-bore-sched-ext-coexistence-fix.patch',
               'latest-poc-selector.patch',
-              'latest-adios.patch',
-              'latest-adios-default.patch',
           ]
           positions = [pkgbuild.index(name) for name in required_order]
           assert positions == sorted(positions), positions
@@ -121,11 +107,10 @@ jobs:
           assert lock['kernel']['version'].startswith(os.environ['KERNEL_SERIES'] + '.'), lock['kernel']
           assert lock['kernel']['tag'].startswith(os.environ['KERNEL_SERIES'] + '.'), lock['kernel']
           expected = {
-              'lru_cast', 'zram_ir', 'adios', 'bore',
-              'bore_sched_ext_coexistence', 'poc_selector', 'nap',
+              'lru_cast', 'bore',
+              'bore_sched_ext_coexistence', 'poc_selector',
           }
           assert set(lock['components']) == expected
-          assert lock['components']['zram_ir']['sha256']
           # A newer native upstream variant is valid; the family must remain locked.
           allowed_origins = {
               'upstream-native', 'upstream-kernel-agnostic',
@@ -245,8 +230,11 @@ jobs:
           compgen -G "${PKGBASE}-*.pkg.tar.zst" >/dev/null
           sha256sum "${PKGBASE}"-*.pkg.tar.zst | tee logs/SHA256SUMS
 
+      # Pull requests save too, so later runs of the same PR (for example
+      # deck/trim-patch-stack) restore a warm cache. GitHub scopes PR caches to
+      # that PR; master caches stay readable by every branch and PR.
       - name: Save compiler cache
-        if: ${{ always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.ccache-key.outputs.save_key != '' }}
+        if: ${{ always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && steps.ccache-key.outputs.save_key != '' }}
         uses: actions/cache/save@v4
         with:
           path: .cache/ccache

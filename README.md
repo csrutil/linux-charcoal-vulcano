@@ -6,7 +6,7 @@
 
 ## Install Latest
 
-Update SteamOS stable, then run in Desktop Mode. On Steam Deck, enable IOMMU in BIOS and reboot first.
+Update SteamOS stable, then run in Desktop Mode.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zarpon/linux-charcoal-vulcano/master/install-charcoal.sh -o install-charcoal.sh && bash install-charcoal.sh
@@ -22,7 +22,7 @@ Exact cached copies in `/var/cache/pacman/pkg` are staged for rollback. If the n
 
 Existing unattended options are preserved: `CHARCOAL_72_REMOVE_STOCK=1` explicitly authorizes stock removal and `CHARCOAL_72_ASSUME_YES=1` accepts both prompts. Their legacy names remain compatible across kernel series.
 
-After success, reboot manually and check `uname -r` and `pacman -Q | grep '^linux-charcoal'`. The running kernel should contain the installed Charcoal series suffix. Use this installer with the current SteamOS stable release, not an older unsupported OS image.
+After success, reboot manually and check `uname -r` and `pacman -Q | grep '^linux-charcoal'`. The running kernel is named `<Valve version>-<pkgrel>-csrutil-<commit>`, for example `7.2.7-valve2-1-csrutil-49c07cb`, where `<commit>` is this repository's short commit. Use this installer with the current SteamOS stable release, not an older unsupported OS image.
 
 ## Automatic stable tracking
 
@@ -38,9 +38,9 @@ Thus, a stable transition to Linux 7.3 or newer is discovered automatically, eve
 
 Kernel discovery does not bypass patch compatibility. Every patch family remains required. The newest upstream project version is selected first, preferring a native variant for the resolved series; tracked ports/adapters preserve their upstream hashes and lineage. Existing ports are checked against the new source before compilation. If upstream bytes or kernel APIs change incompatibly, the build fails for correction instead of removing a patch, downgrading its project version or publishing an incomplete kernel. See [PATCH-SOURCES.md](PATCH-SOURCES.md).
 
-The maintained stack includes BORE/sched_ext coexistence, POC Selector, ADIOS/default elevator, LRU CAST, NAP, ZRAM-IR, AMD P-State EPP boost, CPU/O3 optimizations, Clear/Zen changes, DKMS/Clang/Polly compatibility, firmware/wireless adjustments, Ryzen SMU, controller drivers and local Van Gogh/IOMMU patches. Application order is preserved. `6.16.12-bore-6.8.0-final.patch` is retained as a compatibility reference; the current BORE source is selected dynamically. Superseded 6.18 payloads are replaced by their maintained 7.2 implementations.
+The maintained stack includes BORE/sched_ext coexistence, POC Selector, LRU CAST, AMD P-State EPP boost, CPU/O3 optimizations, Clear/Zen changes, DKMS/Clang compatibility, firmware file-name logging, Ryzen SMU and a local Van Gogh CPU-frequency patch (soft maximum 4.0 GHz). The Van Gogh power limit stays at Valve's stock 29 W sustained / 30 W fast. Application order is preserved. `6.16.12-bore-6.8.0-final.patch` is retained as a compatibility reference; the current BORE source is selected dynamically. Superseded 6.18 payloads are replaced by their maintained 7.2 implementations.
 
-Functionality already present in Valve's source remains accounted for by the resolver instead of being applied twice. Retired fsync opcode-31, C23/libbpf, Bluetooth SSP and upstream Qualcomm ath11k patches already absent from `kernel-7.2` are not reintroduced. The validated `patch-lock.json` records actual patch versions, origins, hashes and upstream-provided functionality.
+Functionality already present in Valve's source remains accounted for by the resolver instead of being applied twice. Retired fsync opcode-31, C23/libbpf, Bluetooth SSP and upstream Qualcomm ath11k patches already absent from `kernel-7.2` are not reintroduced. The OpenWrt minstrel_ht and ath11k remapped-CE patches were removed: both Steam Deck Wi-Fi drivers (rtw88, ath11k PCI) use firmware rate control, and the remapped-CE change only affects ath11k AHB devices. ZRAM-IR, ADIOS, NAP, Clang Polly, IOMMU PerfOpt, the 50 W Van Gogh power limit and the out-of-tree xone/xpadneo/xpad-noone drivers were also removed. Valve's stock CPU idle governors and in-tree `xpad`/`xbox_gip` Xbox drivers are used instead. The validated `patch-lock.json` records actual patch versions, origins, hashes and upstream-provided functionality.
 
 ## Build and release policy
 
@@ -57,7 +57,6 @@ For local preparation with Python 3, Bash and Git:
 ```bash
 python3 automation/prepare-pkgbuild-7.2.py --write PKGBUILD
 python3 automation/prepare-steamos-stable.py --fetch-config
-python3 automation/resolve-controller-drivers.py --write
 python3 automation/resolve-latest-patches-7.2-policy.py --overrides logs/patch-source-overrides-stable.json --write
 python3 automation/validate-patch-lock.py --manifest logs/patch-sources-7.2.json --overrides logs/patch-source-overrides-stable.json
 ```
@@ -69,10 +68,6 @@ Some helper filenames retain `7.2` for compatibility; the stable entry point sup
 The software Crypto API ZSTD default is **level 1** (ZSTD_DEF_LEVEL=1), used by generic ZSTD zswap. The existing code derives compression parameters and workspace sizes automatically; its window limit and decompressor are unchanged. The build checks the prepared source and publishes zstd-crypto-level.txt and zstd-crypto-source.sha256. This default also applies to other users of the generic Crypto API codec. ZRAM-IR's separate fast setting and hardware-specific Intel QAT backends retain their existing behavior.
 
 
-O3 and Charcoal gaming/memory configuration remain enabled. Installation persistently disables ZRAM/services, enables ZSTD zswap with a **35% RAM pool**, shrinker enabled, and a `/home` swapfile sized to **100% of RAM**. ZRAM-IR support remains available in the kernel. See [SWAP.md](SWAP.md).
+O3 and Charcoal gaming/memory configuration remain enabled. Installation persistently disables ZRAM/services, enables ZSTD zswap with a **35% RAM pool**, shrinker enabled, and a `/home` swapfile sized to **100% of RAM**. See [SWAP.md](SWAP.md).
 
 Runtime values remain `vm.vfs_cache_pressure=100`, `vm.dirty_background_ratio=2` and `vm.dirty_ratio=5`, preserving LRU CAST defaults. `CONFIG_ZEN_INTERACTIVE` controls the existing evdev asynchronous RCU and P-State schedutil-selection changes, without importing additional Zen memory/scheduler defaults.
-
-IOMMU PerfOpt automatically uses an optimized identity DMA path on eligible AMD integrated GPUs. While active, ATS, PRI, PASID and SVA/GCR3 setup is skipped for that device, reducing DMA containment. Results depend on hardware/workload, with no guaranteed percentage gain or `amdgpu.iommu_perfopt` runtime opt-out.
-
-Every build fetches the latest NAP tools and records their commit/hashes. Learning persists across boots, with saves every 30 minutes. Includes `napctl` and `/usr/share/nap/napviz.html`, generated from the compiled kernel model. See [NAP-TOOLS.md](NAP-TOOLS.md).

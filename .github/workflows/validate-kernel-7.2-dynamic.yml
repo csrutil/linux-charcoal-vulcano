@@ -31,7 +31,6 @@ jobs:
             automation/validate-patch-lock.py \
             automation/audit-latest-patch-versions.py \
             automation/port-poc-selector.py \
-            automation/port-adios-7.2.py \
             automation/fix-gud-tv-mode-fortify.py \
             tests/test_patch_gud_fortify.py \
             automation/port-zen-cpufreq-7.2.py \
