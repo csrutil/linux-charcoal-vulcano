@@ -97,7 +97,7 @@ sha256sums=(
   'SKIP'
   'ecd8c76eb203493e67ba4052e7bc1fa46f51c91566f102172e7a18d7de2dd5eb'
   'c9482d23e18ab37911847918eadfbc022c606f8eddab07acd43ef4d4f339037f'
-  'f1a3348147855f8ebeb10e3b1b01405731f0220b309a909aa3e922151d6bfccc'
+  'bda3cc1ca92db517d15791805f1e95084e6cf2f815ff0bc8661e2d9ed2648ed9'
   '8f191383786510c351ef153af08cfa23d452d162571645fc4cbe97e283a53539'
   'ae521b7acee1c4fcd46cc7fb2d514782a3b74b475115ca4f5c59c804f3f0c3f6'
   '6e71f4ef06f4e40053ac530d0000669bcf65db6e3992ccee54f0c61f8ba04ec6'
@@ -129,6 +129,9 @@ sha256sums=(
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
+# csrutil: an empty LOCALVERSION stops scripts/setlocalversion from adding "+".
+# With CONFIG_LOCALVERSION_AUTO off, the release has no -g<commit> or -dirty.
+export LOCALVERSION=
 
 _validate_kernel_config() {
   local expected
@@ -142,7 +145,8 @@ _validate_kernel_config() {
     'CONFIG_ZSWAP_COMPRESSOR_DEFAULT_ZSTD=y' \
     'CONFIG_ZSWAP_COMPRESSOR_DEFAULT="zstd"' \
     'CONFIG_ZSMALLOC=y' \
-    'CONFIG_CRYPTO_LZ4=y'; do
+    'CONFIG_CRYPTO_LZ4=y' \
+    '# CONFIG_LOCALVERSION_AUTO is not set'; do
     if ! grep -qxF "$expected" .config; then
       echo "ERROR: kernel configuration requires $expected after olddefconfig" >&2
       return 1
@@ -154,8 +158,14 @@ prepare() {
   cd $_srcname
 
   echo "Setting version..."
+  # csrutil: uname -r is 7.2.7-valve2-<pkgrel>-csrutil-<commit of this repo>.
+  local build_commit
+  build_commit=$(git -C "$startdir" rev-parse --short=7 HEAD) || {
+    echo "ERROR: cannot read the commit of $startdir for the kernel name" >&2
+    return 1
+  }
   echo "-$pkgrel" > localversion.10-pkgrel
-  echo "${pkgbase#linux}" > localversion.20-pkgname
+  echo "-csrutil-$build_commit" > localversion.20-pkgname
 
   local src
   for src in "${source[@]}"; do

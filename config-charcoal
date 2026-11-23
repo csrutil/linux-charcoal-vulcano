@@ -42,6 +42,9 @@ CONFIG_ZRAM=m
 # ALSA tuning
 CONFIG_SND_CTL_INPUT_VALIDATION=n
 
+# csrutil: no -g<commit>/-dirty suffix; PKGBUILD names the kernel
+CONFIG_LOCALVERSION_AUTO=n
+
 # Change default hostname (Neptune bug)
 CONFIG_DEFAULT_HOSTNAME="steamdeck"
 

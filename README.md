@@ -22,7 +22,7 @@ Exact cached copies in `/var/cache/pacman/pkg` are staged for rollback. If the n
 
 Existing unattended options are preserved: `CHARCOAL_72_REMOVE_STOCK=1` explicitly authorizes stock removal and `CHARCOAL_72_ASSUME_YES=1` accepts both prompts. Their legacy names remain compatible across kernel series.
 
-After success, reboot manually and check `uname -r` and `pacman -Q | grep '^linux-charcoal'`. The running kernel should contain the installed Charcoal series suffix. Use this installer with the current SteamOS stable release, not an older unsupported OS image.
+After success, reboot manually and check `uname -r` and `pacman -Q | grep '^linux-charcoal'`. The running kernel is named `<Valve version>-<pkgrel>-csrutil-<commit>`, for example `7.2.7-valve2-1-csrutil-49c07cb`, where `<commit>` is this repository's short commit. Use this installer with the current SteamOS stable release, not an older unsupported OS image.
 
 ## Automatic stable tracking
 

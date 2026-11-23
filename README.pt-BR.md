@@ -22,7 +22,7 @@ Prepara cópias exatas do cache `/var/cache/pacman/pkg` para rollback. Se a inst
 
 As opções existentes continuam compatíveis: `CHARCOAL_72_REMOVE_STOCK=1` autoriza explicitamente a remoção do original e `CHARCOAL_72_ASSUME_YES=1` aceita as duas confirmações. Os nomes antigos são preservados entre séries.
 
-Após o sucesso, reinicie manualmente e confira `uname -r` e `pacman -Q | grep '^linux-charcoal'`. O kernel deve conter o sufixo Charcoal instalado. Use com o SteamOS stable atual, não com uma imagem antiga sem suporte.
+Após o sucesso, reinicie manualmente e confira `uname -r` e `pacman -Q | grep '^linux-charcoal'`. O kernel em execução se chama `<versão Valve>-<pkgrel>-csrutil-<commit>`, por exemplo `7.2.7-valve2-1-csrutil-49c07cb`, onde `<commit>` é o commit curto deste repositório. Use com o SteamOS stable atual, não com uma imagem antiga sem suporte.
 
 ## Acompanhamento automático do stable
 

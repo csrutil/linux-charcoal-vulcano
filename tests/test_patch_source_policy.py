@@ -92,6 +92,21 @@ class PatchSourcePolicyTests(unittest.TestCase):
             (ROOT / "vangogh_allow_higher_cpu_freq.patch").read_text(encoding="utf-8"),
         )
 
+    def test_kernel_release_is_named_after_this_repository_commit(self) -> None:
+        # uname -r must be 7.2.7-valve2-<pkgrel>-csrutil-<commit>: no Valve
+        # -g<commit>, no -dirty from the patched tree and no trailing "+".
+        fragment = (ROOT / "config-charcoal").read_text(encoding="utf-8")
+        self.assertIn("CONFIG_LOCALVERSION_AUTO=n\n", fragment)
+        self.assertIn("export LOCALVERSION=\n", PKGBUILD)
+        self.assertIn("'# CONFIG_LOCALVERSION_AUTO is not set'", PKGBUILD)
+        self.assertIn(
+            'build_commit=$(git -C "$startdir" rev-parse --short=7 HEAD)', PKGBUILD
+        )
+        self.assertIn(
+            'echo "-csrutil-$build_commit" > localversion.20-pkgname', PKGBUILD
+        )
+        self.assertNotIn('echo "${pkgbase#linux}" > localversion', PKGBUILD)
+
     def test_source_and_checksum_arrays_remain_aligned(self) -> None:
         start, end = resolver.find_array_bounds(PKGBUILD, "sha256sums")
         checksums = [
