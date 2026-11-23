@@ -230,8 +230,11 @@ jobs:
           compgen -G "${PKGBASE}-*.pkg.tar.zst" >/dev/null
           sha256sum "${PKGBASE}"-*.pkg.tar.zst | tee logs/SHA256SUMS
 
+      # Pull requests save too, so later runs of the same PR (for example
+      # deck/trim-patch-stack) restore a warm cache. GitHub scopes PR caches to
+      # that PR; master caches stay readable by every branch and PR.
       - name: Save compiler cache
-        if: ${{ always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.ccache-key.outputs.save_key != '' }}
+        if: ${{ always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && steps.ccache-key.outputs.save_key != '' }}
         uses: actions/cache/save@v4
         with:
           path: .cache/ccache
