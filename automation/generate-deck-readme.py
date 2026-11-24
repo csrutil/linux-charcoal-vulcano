@@ -149,6 +149,7 @@ If the Deck does not boot: try holding the **`…`** button while pressing **pow
 |---|---|
 | CPU soft maximum | 4000 MHz (SMU range `CCLK 1400–4000 MHz`); the CPU still reports 3.5 GHz as its real maximum |
 | Kernel name | `<Valve version>-<pkgrel>-csrutil-<commit>`, no `-g<commit>`, `-dirty` or `+` |
+| LRU CAST | Pinned to upstream commit `fe915da` (`0.2.11`). `0.3.0` only supports Linux 7.3 and does not apply to Valve's 7.2 |
 
 **Kept**
 

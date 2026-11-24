@@ -128,6 +128,24 @@ class NetworkRetryTests(unittest.TestCase):
                 sleep.assert_not_called()
 
 
+class PinnedRefTests(unittest.TestCase):
+    def setUp(self) -> None:
+        MODULE._TREE_CACHE.clear()
+
+    def test_commit_sha_ref_reads_that_tree_without_a_branch_lookup(self) -> None:
+        sha = "fe915da367146a0477b4ea24961f66e2fa487ee9"
+        with mock.patch.object(MODULE, "request_json", return_value={"tree": []}) as request:
+            self.assertEqual(MODULE.repository_tree("firelzrd/lru_cast", sha, None), (sha, {"tree": []}))
+        request.assert_called_once_with(
+            f"{MODULE.API}/repos/firelzrd/lru_cast/git/trees/{sha}?recursive=1", None)
+
+    def test_branch_ref_still_resolves_the_branch_head(self) -> None:
+        responses = [{"commit": {"sha": "a" * 40}}, {"tree": []}]
+        with mock.patch.object(MODULE, "request_json", side_effect=responses) as request:
+            self.assertEqual(MODULE.repository_tree("firelzrd/lru_cast", "main", None)[0], "a" * 40)
+        self.assertIn("/branches/main", request.call_args_list[0].args[0])
+
+
 class LocalPortTrackingTests(unittest.TestCase):
     def candidate(
         self,

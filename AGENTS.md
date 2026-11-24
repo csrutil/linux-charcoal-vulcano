@@ -17,6 +17,7 @@ These are the owner's (csrutil) standing instructions. Follow them without being
 
 ## Kernel
 - Kernel name: `<Valve version>-<pkgrel>-csrutil-<commit>`, for example `7.2.7-valve2-1-csrutil-2244341`. Never `-g<commit>`, `-dirty` or `+`.
+- LRU CAST is pinned to `fe915da` (`0.2.11`) in `automation/patch-sources.json` (`ref`), because `0.3.0` targets Linux 7.3 only. Move the pin when Valve's kernel or upstream changes.
 - Kept, removed and changed patches are listed in the release `README.md` (`automation/generate-deck-readme.py`). Do not add back a removed item without asking.
 
 ## Steam Deck
