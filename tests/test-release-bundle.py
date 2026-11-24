@@ -23,8 +23,7 @@ class BundleTests(unittest.TestCase):
             audit = ('patch-lock.json', 'steamos-stable-source.json', 'checksum-validation.txt', 'release-notes.md', 'zstd-crypto-level.txt', 'zstd-crypto-source.sha256')
             for name in audit:
                 (root / 'logs' / name).write_text('audit fixture\n')
-            for name in ('README.md', 'README.pt-BR.md'):
-                (root / name).write_text('documentation fixture\n')
+            (root / 'README.md').write_text('documentation fixture\n')
             for part in ('', '-headers'):
                 (root / f'linux-charcoal-73{part}-7.3.1.valve1.cc1-1-x86_64.pkg.tar.zst').write_bytes(b'package fixture')
             archive = root / 'linux-charcoal-73-7.3.1.valve1.cc1-r1.zip'
@@ -36,7 +35,7 @@ class BundleTests(unittest.TestCase):
                 self.assertEqual(len(names), len(set(names)))
                 self.assertTrue(set(audit) <= set(names))
                 self.assertIn('README.md', names)
-                self.assertIn('README.pt-BR.md', names)
+                self.assertNotIn('README.pt-BR.md', names)
                 self.assertFalse(any(name.endswith('.zip') for name in names))
                 for line in z.read('SHA256SUMS').decode().splitlines():
                     digest, name = line.split('  ', 1)
