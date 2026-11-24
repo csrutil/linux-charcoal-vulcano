@@ -11,7 +11,7 @@
       "name": "lru_cast",
       "kind": "github_tree",
       "repository": "firelzrd/lru_cast",
-      "ref": "main",
+      "ref": "fe915da367146a0477b4ea24961f66e2fa487ee9",
       "target": "latest-lru_cast.patch",
       "source_regex": "(?:latest-lru_cast\\.patch|6\\.\\d+(?:\\.\\d+)?-lru_cast-[^\\s]+\\.patch)",
       "filename_regex": "(?i)^patches/(?:stable/|testing/)?0001-(?:linux)?\\d+\\.\\d+(?:\\.\\d+)?(?:-rc\\d+)?-lru_cast-v?[0-9]+(?:\\.[0-9]+)*(?:-rc[0-9]+|r[0-9]+)?\\.patch$",
@@ -21,37 +21,6 @@
       "port_when_incompatible": true,
       "adaptive_port": "lru-cast-context",
       "latest_release_first": true
-    },
-    {
-      "name": "zram_ir",
-      "kind": "github_tree",
-      "repository": "firelzrd/zram-ir",
-      "ref": "main",
-      "target": "latest-zram-ir.patch",
-      "source_regex": "(?:latest-zram-ir\\.patch|0001-linux[^\\s]*-zram-ir-[^\\s]+\\.patch)",
-      "filename_regex": "(?i)^patches/(?:stable/|testing/)?0001-linux\\d+\\.\\d+(?:\\.\\d+)?(?:-rc[0-9]+)?(?:\\.y)?-zram-ir-[0-9]+(?:\\.[0-9]+)*(?:(?:-rc|r)[0-9]+)?\\.patch$",
-      "kernel_version_regex": "(?i)linux(?P<kernel>\\d+\\.\\d+(?:\\.\\d+)?)(?:-rc[0-9]+)?(?:\\.y)?",
-      "project_version_regex": "(?i)zram-ir-(?P<version>[0-9]+(?:\\.[0-9]+)*(?:(?:-rc|r)[0-9]+)?)\\.patch$",
-      "port_for_kernel": "7.2",
-      "port_when_incompatible": true,
-      "local_port": "0001-linux7.2-zram-ir-1.2.patch",
-      "local_port_project_version": "1.3",
-      "local_port_upstream_sha256": "1620f45f0fbab1173c8693a2afc0ada37920c78fdde2d0cbff6afe28545128f4"
-    },
-    {
-      "name": "adios",
-      "kind": "github_tree",
-      "repository": "firelzrd/adios",
-      "ref": "main",
-      "target": "latest-adios.patch",
-      "source_regex": "(?:latest-adios\\.patch|6\\.\\d+(?:\\.\\d+)?-ADIOS-[^\\s]+\\.patch)",
-      "filename_regex": "(?i)^patches/(?:stable|testing)/0001-linux\\d+\\.\\d+(?:\\.[0-9]+)?(?:-rc[0-9]+)?-ADIOS-[0-9]+(?:\\.[0-9]+)*(?:-rc[0-9]+|r[0-9]+)?\\.patch$",
-      "kernel_version_regex": "(?i)linux(?P<kernel>\\d+\\.\\d+(?:\\.\\d+)?)",
-      "project_version_regex": "(?i)ADIOS-(?P<version>[0-9]+(?:\\.[0-9]+)*(?:-rc[0-9]+|r[0-9]+)?)\\.patch$",
-      "exclude_regex": "(?i)default",
-      "port_for_kernel": "7.2",
-      "port_when_incompatible": true,
-      "adaptive_port": "adios-pkgbuild-7.2"
     },
     {
       "name": "bore",
@@ -91,20 +60,6 @@
       "port_for_kernel": "7.2",
       "port_when_incompatible": true,
       "adaptive_port": "poc-selector-valve"
-    },
-    {
-      "name": "nap",
-      "kind": "github_tree",
-      "repository": "firelzrd/nap",
-      "ref": "main",
-      "target": "latest-nap.patch",
-      "source_regex": "(?:latest-nap\\.patch|6\\.\\d+(?:\\.\\d+)?-nap-v?[^\\s]+\\.patch)",
-      "filename_regex": "(?i)^patches/(?:stable|testing)/0001-\\d+\\.\\d+(?:\\.\\d+)?(?:-[0-9A-Za-z.]+)?-nap-v?[0-9A-Za-z._-]+\\.patch$",
-      "kernel_version_regex": "(?i)(?P<kernel>\\d+\\.\\d+(?:\\.\\d+)?)",
-      "project_version_regex": "(?i)nap-v?(?P<version>[0-9]+(?:\\.[0-9]+)*(?:(?:-rc|r)[0-9]+)?)\\.patch$",
-      "port_for_kernel": "7.2",
-      "port_when_incompatible": true,
-      "adaptive_port": "nap-direct-apply-7.2"
     }
   ],
   "auxiliary_components": [
@@ -223,20 +178,6 @@
       "kernel_version_regex": "^(?P<kernel>\\d+\\.\\d+)/"
     },
     {
-      "name": "clang_polly",
-      "kind": "github_tree",
-      "repository": "CachyOS/kernel-patches",
-      "ref": "master",
-      "target": "latest-clang-polly.patch",
-      "source_regex": "https://raw\\.githubusercontent\\.com/CachyOS/kernel-patches/(?:refs/heads/master|[0-9a-f]{40})/[^/]+/misc/0001-clang-polly\\.patch",
-      "filename_regex": "^\\d+\\.\\d+/misc/0001-clang-polly\\.patch$",
-      "kernel_version_regex": "^(?P<kernel>\\d+\\.\\d+)/",
-      "port_for_kernel": "7.2",
-      "port_when_incompatible": true,
-      "local_port": "7.2-clang-polly-from-cachyos-7.1.patch",
-      "local_port_upstream_sha256": "71e5926efc30833a6fd756b9358529ac695fa688ae71cd74e31dd274ae1ecf05"
-    },
-    {
       "name": "firmware_name",
       "kind": "http_patch",
       "target": "latest-firmware-name.patch",
@@ -248,56 +189,6 @@
       "repository": "gentoo/linux-patches",
       "path": "3000_Support-printing-firmware-info.patch",
       "commit": "369383f08d147fd98553defeff5423912d34e177"
-    },
-    {
-      "name": "minstrel_frac",
-      "kind": "github_tree",
-      "repository": "openwrt/openwrt",
-      "ref": "main",
-      "target": "latest-minstrel-frac.patch",
-      "source_regex": "302-mac80211-minstrel_ht-fix-MINSTREL_FRAC-macro\\.patch::https://git\\.openwrt\\.org/.+",
-      "filename_regex": "^package/kernel/mac80211/patches/subsys/302-mac80211-minstrel_ht-fix-MINSTREL_FRAC-macro\\.patch$",
-      "always_latest": true
-    },
-    {
-      "name": "minstrel_fluctuation",
-      "kind": "github_tree",
-      "repository": "openwrt/openwrt",
-      "ref": "main",
-      "target": "latest-minstrel-fluctuation.patch",
-      "source_regex": "303-mac80211-minstrel_ht-reduce-fluctuations-in-rate-pro\\.patch::https://git\\.openwrt\\.org/.+",
-      "filename_regex": "^package/kernel/mac80211/patches/subsys/303-mac80211-minstrel_ht-reduce-fluctuations-in-rate-pro\\.patch$",
-      "always_latest": true
-    },
-    {
-      "name": "minstrel_downgrade",
-      "kind": "github_tree",
-      "repository": "openwrt/openwrt",
-      "ref": "main",
-      "target": "latest-minstrel-downgrade.patch",
-      "source_regex": "304-mac80211-minstrel_ht-rework-rate-downgrade-code-and-\\.patch::https://git\\.openwrt\\.org/.+",
-      "filename_regex": "^package/kernel/mac80211/patches/subsys/304-mac80211-minstrel_ht-rework-rate-downgrade-code-and-\\.patch$",
-      "always_latest": true
-    },
-    {
-      "name": "ath11k_remapped_ce",
-      "kind": "github_tree",
-      "repository": "openwrt/openwrt",
-      "ref": "main",
-      "target": "latest-ath11k-remapped-ce.patch",
-      "source_regex": "910-ath11k-fix-remapped-ce-accessing-issue-on-64bit-OS\\.patch::https://git\\.openwrt\\.org/.+",
-      "filename_regex": "^package/kernel/mac80211/patches/ath11k/910-ath11k-fix-remapped-ce-accessing-issue-on-64bit-OS\\.patch$",
-      "always_latest": true
-    },
-    {
-      "name": "adios_default",
-      "kind": "github_tree",
-      "repository": "firelzrd/adios",
-      "ref": "main",
-      "target": "latest-adios-default.patch",
-      "source_regex": "https://raw\\.githubusercontent\\.com/firelzrd/adios/[0-9a-f]{40}/patches/0002-Make-ADIOS-the-Default-I-O-scheduler\\.patch",
-      "filename_regex": "^patches/0002-Make-ADIOS-the-Default-I-O-scheduler\\.patch$",
-      "always_latest": true
     },
     {
       "name": "zen_01",

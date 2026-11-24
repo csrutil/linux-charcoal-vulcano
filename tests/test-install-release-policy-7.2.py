@@ -123,10 +123,14 @@ class InstallerReleasePolicyTests(unittest.TestCase):
 
     def test_master_publishes_latest_and_development_has_no_automatic_trigger(self):
         workflow = (ROOT / ".github/workflows/push.yml").read_text()
-        publish = workflow.split("      - name: Publish latest stable release", 1)[1]
-        publish = publish.split("      - name: Verify stable release", 1)[0]
-        self.assertEqual(publish.count("--prerelease=false"), 2)
-        self.assertEqual(publish.count("--latest"), 2)
+        publish = workflow.split("      - name: Publish Steam Deck release", 1)[1]
+        publish = publish.split("      - name: Verify Steam Deck release", 1)[0]
+        # master: Latest; pull requests: pre-release that never becomes Latest.
+        self.assertIn("kind=(--latest)", publish)
+        self.assertIn("edit_kind=(--prerelease=false --latest)", publish)
+        self.assertIn("kind=(--prerelease --latest=false)", publish)
+        self.assertIn("edit_kind=(--prerelease=true --latest=false)", publish)
+        self.assertIn('gh release create "$DECK_RELEASE_TAG"', publish)
         self.assertIn("github.ref == 'refs/heads/master'", publish)
         self.assertIn("inputs.publish_release", publish)
         self.assertIn("releases/latest", workflow)
@@ -139,10 +143,11 @@ class InstallerReleasePolicyTests(unittest.TestCase):
         self.assertNotIn("--ref kernel-7.2", daily)
 
     def test_readmes_describe_stable_latest_installer(self):
-        for name in ("README.md", "README.pt-BR.md"):
-            readme = (ROOT / name).read_text().lower()
-            self.assertIn("prerelease = false", readme)
-            self.assertIn("releases/latest", readme)
+        readme = (ROOT / "README.md").read_text().lower()
+        self.assertIn("**latest**", readme)
+        self.assertIn("**pre-release**", readme)
+        self.assertIn("releases/latest", readme)
+        self.assertFalse((ROOT / "README.pt-BR.md").exists())
 
 
 if __name__ == "__main__":

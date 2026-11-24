@@ -19,6 +19,8 @@ class KernelConfigValidationTests(unittest.TestCase):
         # inputs come from the same fragment that prepare() merges for the build.
         self.config = (ROOT / "config-charcoal").read_text()
         self.config += '\nCONFIG_ZSWAP_COMPRESSOR_DEFAULT="zstd"\n'
+        # olddefconfig writes the fragment's CONFIG_LOCALVERSION_AUTO=n this way.
+        self.config += "# CONFIG_LOCALVERSION_AUTO is not set\n"
 
     def validate(self, config):
         with tempfile.TemporaryDirectory() as directory:
@@ -53,6 +55,14 @@ class KernelConfigValidationTests(unittest.TestCase):
                 result = self.validate(self.config.replace(setting, f"# {symbol} is not set"))
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(setting, result.stderr)
+
+    def test_auto_localversion_fails_the_prepare_gate(self):
+        # CONFIG_LOCALVERSION_AUTO=y would add -g<commit>-dirty to uname -r.
+        result = self.validate(self.config.replace(
+            "# CONFIG_LOCALVERSION_AUTO is not set", "CONFIG_LOCALVERSION_AUTO=y"
+        ))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("# CONFIG_LOCALVERSION_AUTO is not set", result.stderr)
 
 
 if __name__ == "__main__":

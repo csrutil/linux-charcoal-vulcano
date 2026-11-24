@@ -57,14 +57,6 @@ jobs:
           set -Eeuo pipefail
           python3 automation/run-local-tests.py
 
-      - name: Resolve latest controller drivers
-        run: |
-          set -Eeuo pipefail
-          python3 tests/test-controller-driver-resolution.py -v
-          python3 automation/resolve-controller-drivers.py --write | tee controller-driver-resolution.log
-          mv controller-driver-resolution.log logs/controller-driver-resolution.log
-          bash -n PKGBUILD
-
       - name: Resolve official SteamOS stable source and Arch config
         run: |
           set -Eeuo pipefail
@@ -97,10 +89,6 @@ jobs:
           grep -Fxq "_nepbase=linux-neptune-${PKGBASE#linux-charcoal-}" PKGBUILD
           grep -Fq 'CONFIG_RTW89_USB=m' config-neptune
           grep -Fq 'CONFIG_ZSWAP_DEFAULT_ON=y' config-neptune
-          grep -Fq 'CONFIG_ZRAM_MULTI_COMP=y' config-charcoal
-          grep -Fq 'CONFIG_ZRAM_DEF_COMP_LZ4=y' config-charcoal
-          grep -Fq 'params->level = -1;' latest-zram-ir.patch
-          grep -Fq 'sysctl_zram_recomp_immediate = 1' latest-zram-ir.patch
           python3 - <<'PY'
           import json, os
           from pathlib import Path
@@ -110,8 +98,6 @@ jobs:
               'latest-bore.patch',
               'latest-bore-sched-ext-coexistence-fix.patch',
               'latest-poc-selector.patch',
-              'latest-adios.patch',
-              'latest-adios-default.patch',
           ]
           positions = [pkgbuild.index(name) for name in required_order]
           assert positions == sorted(positions), positions
@@ -121,11 +107,10 @@ jobs:
           assert lock['kernel']['version'].startswith(os.environ['KERNEL_SERIES'] + '.'), lock['kernel']
           assert lock['kernel']['tag'].startswith(os.environ['KERNEL_SERIES'] + '.'), lock['kernel']
           expected = {
-              'lru_cast', 'zram_ir', 'adios', 'bore',
-              'bore_sched_ext_coexistence', 'poc_selector', 'nap',
+              'lru_cast', 'bore',
+              'bore_sched_ext_coexistence', 'poc_selector',
           }
           assert set(lock['components']) == expected
-          assert lock['components']['zram_ir']['sha256']
           # A newer native upstream variant is valid; the family must remain locked.
           allowed_origins = {
               'upstream-native', 'upstream-kernel-agnostic',
@@ -245,8 +230,11 @@ jobs:
           compgen -G "${PKGBASE}-*.pkg.tar.zst" >/dev/null
           sha256sum "${PKGBASE}"-*.pkg.tar.zst | tee logs/SHA256SUMS
 
+      # Pull requests save too, so later runs of the same PR (for example
+      # deck/trim-patch-stack) restore a warm cache. GitHub scopes PR caches to
+      # that PR; master caches stay readable by every branch and PR.
       - name: Save compiler cache
-        if: ${{ always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.ccache-key.outputs.save_key != '' }}
+        if: ${{ always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && steps.ccache-key.outputs.save_key != '' }}
         uses: actions/cache/save@v4
         with:
           path: .cache/ccache
@@ -290,8 +278,7 @@ jobs:
               handle.writestr('SHA256SUMS', manifest)
               for name in ('patch-lock.json', 'steamos-stable-source.json', 'checksum-validation.txt', 'release-notes.md', 'zstd-crypto-level.txt', 'zstd-crypto-source.sha256'):
                   handle.write(Path('logs') / name, name)
-              for name in ('README.md', 'README.pt-BR.md'):
-                  handle.write(name, name)
+              handle.write('README.md', 'README.md')
               for package in packages:
                   handle.write(package, package.name)
           digest = hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -299,11 +286,51 @@ jobs:
               f"{digest}  {archive.name}\n", encoding='utf-8'
           )
           PY
-      - name: Publish latest stable release
-        if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_release)) && github.ref == 'refs/heads/master'
+      - name: Prepare Steam Deck release
         run: |
           set -Eeuo pipefail
-          [[ "$RELEASE_TAG" == "charcoal-${KERNEL_SERIES}."* ]]
+          kernel_pkg="$(compgen -G "${PKGBASE}-[0-9]*.pkg.tar.zst")"
+          DECK_RELEASE_TAG="$(tar --zstd -tf "$kernel_pkg" | sed -n 's#^usr/lib/modules/\([^/]*\)/vmlinuz$#\1#p')"
+          [[ "$DECK_RELEASE_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+-.+-csrutil-[0-9a-f]{7,40}$ ]]
+          echo "DECK_RELEASE_TAG=$DECK_RELEASE_TAG" >> "$GITHUB_ENV"
+          PKGREL="$(bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')"
+          pull_request=""
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            pull_request="$PR_NUMBER"
+          fi
+          mkdir -p release
+          tar -czf release/logs.tar.gz logs
+          python3 automation/generate-deck-readme.py \
+            --kernel-release "$DECK_RELEASE_TAG" \
+            --pkgbase "$PKGBASE" \
+            --pkgver "$PKGVER" \
+            --pkgrel "$PKGREL" \
+            --release-zip "$RELEASE_ZIP" \
+            --lock logs/patch-lock.json \
+            --source logs/steamos-stable-source.json \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --pull-request "$pull_request" \
+            --assets-dir . \
+            --output release/README.md
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      # Pull requests publish a pre-release; master publishes the Latest release.
+      # The tag is the kernel name (uname -r), so each build has its own release.
+      - name: Publish Steam Deck release
+        if: github.event_name == 'pull_request' || ((github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_release)) && github.ref == 'refs/heads/master')
+        run: |
+          set -Eeuo pipefail
+          title="${DECK_RELEASE_TAG} (Steam Deck)"
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            kind=(--prerelease --latest=false)
+            edit_kind=(--prerelease=true --latest=false)
+          else
+            kind=(--latest)
+            edit_kind=(--prerelease=false --latest)
+          fi
           assets=(
             "$RELEASE_ZIP"
             "${PKGBASE}"-*.pkg.tar.zst
@@ -313,55 +340,50 @@ jobs:
             logs/steamos-stable-source.json
             logs/zstd-crypto-level.txt
             logs/zstd-crypto-source.sha256
+            release/logs.tar.gz
+            release/README.md
           )
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "${assets[@]}" \
+          if gh release view "$DECK_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$DECK_RELEASE_TAG" "${assets[@]}" \
               --repo "$GITHUB_REPOSITORY" --clobber
-            gh release edit "$RELEASE_TAG" \
+            gh release edit "$DECK_RELEASE_TAG" \
               --repo "$GITHUB_REPOSITORY" \
-              --title "Charcoal SteamOS Stable ${PKGVER}" \
-              --notes-file logs/release-notes.md \
+              --title "$title" \
+              --notes-file release/README.md \
               --draft=false \
-              --prerelease=false \
-              --latest
+              "${edit_kind[@]}"
           else
-            gh release create "$RELEASE_TAG" "${assets[@]}" \
+            gh release create "$DECK_RELEASE_TAG" "${assets[@]}" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "Charcoal SteamOS Stable ${PKGVER}" \
-              --notes-file logs/release-notes.md \
-              --prerelease=false \
-              --latest
+              --title "$title" \
+              --notes-file release/README.md \
+              "${kind[@]}"
           fi
 
-      - name: Verify stable release flags and Latest endpoint
-        if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_release)) && github.ref == 'refs/heads/master'
+      - name: Verify Steam Deck release
+        if: github.event_name == 'pull_request' || ((github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_release)) && github.ref == 'refs/heads/master')
         run: |
           set -Eeuo pipefail
-          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 \
-            --json tagName,isDraft,isPrerelease,isLatest,name \
-            --jq '.[] | select(.tagName == env.RELEASE_TAG)' > logs/release-state.json
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$DECK_RELEASE_TAG" > logs/release-state.json
           python3 - <<'PY'
           import json, os
           from pathlib import Path
 
-          record = json.loads(Path('logs/release-state.json').read_text(encoding='utf-8'))
-          assert record['tagName'].startswith('charcoal-' + os.environ['KERNEL_SERIES'] + '.'), record
-          assert record['name'].startswith('Charcoal SteamOS Stable '), record
-          assert record['isDraft'] is False, record
-          assert record['isPrerelease'] is False, record
-          assert record['isLatest'] is True, record
+          release = json.loads(Path('logs/release-state.json').read_text(encoding='utf-8'))
+          is_pr = os.environ['GITHUB_EVENT_NAME'] == 'pull_request'
+          assert release['tag_name'] == os.environ['DECK_RELEASE_TAG'], release['tag_name']
+          assert release['name'] == os.environ['DECK_RELEASE_TAG'] + ' (Steam Deck)', release['name']
+          assert release['draft'] is False, release
+          assert release['prerelease'] is is_pr, release
+          expected = {os.environ['RELEASE_ZIP'], 'RELEASE-ZIP-SHA256SUM', 'SHA256SUMS', 'patch-lock.json',
+                      'steamos-stable-source.json', 'logs.tar.gz', 'README.md'}
+          assert expected <= {asset['name'] for asset in release['assets']}, release['assets']
           PY
-          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > logs/latest-release.json
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          release = json.loads(Path('logs/latest-release.json').read_text())
-          assert release['tag_name'] == os.environ['RELEASE_TAG'], release
-          assert release['draft'] is False and release['prerelease'] is False
-          expected = {os.environ['RELEASE_ZIP'], 'RELEASE-ZIP-SHA256SUM', 'patch-lock.json', 'steamos-stable-source.json', 'zstd-crypto-level.txt', 'zstd-crypto-source.sha256'}
-          assert expected <= {asset['name'] for asset in release['assets']}, release
-          PY
+          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name > logs/latest-release.txt
+            [[ "$(<logs/latest-release.txt)" == "$DECK_RELEASE_TAG" ]]
+          fi
 
       - name: Upload 7.2 packages and validation logs
         if: always()

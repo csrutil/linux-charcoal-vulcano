@@ -53,11 +53,8 @@ jobs:
             automation/validate-patch-lock.py \
             automation/audit-latest-patch-versions.py \
             automation/port-poc-selector.py \
-            automation/port-adios-7.2.py \
             automation/fix-gud-tv-mode-fortify.py \
             tests/test_patch_gud_fortify.py \
-            automation/fix-nap-kernel-api.py \
-            tests/test_nap_kernel_api.py \
             automation/normalize-diff-whitespace.py \
             tests/test-prepare-steamos-7.2.py \
             tests/test-prepare-pkgbuild-7.2.py \
@@ -66,7 +63,6 @@ jobs:
             tests/test-install-release-policy-7.2.py \
             tests/test-unused-6.16-patches-7.2.py
           python3 tests/test_patch_gud_fortify.py -v
-          python3 tests/test_nap_kernel_api.py -v
           python3 tests/test-prepare-steamos-7.2.py -v
           python3 tests/test-prepare-pkgbuild-7.2.py -v
           python3 tests/test-resolve-latest-patches-7.2.py -v
@@ -77,14 +73,6 @@ jobs:
           bash -n install-charcoal.sh
           bash tests/test-install-charcoal.sh
           bash tests/test-runtime-tuning.sh
-
-      - name: Resolve latest controller drivers
-        run: |
-          set -Eeuo pipefail
-          python3 tests/test-controller-driver-resolution.py -v
-          python3 automation/resolve-controller-drivers.py --write | tee controller-driver-resolution.log
-          mv controller-driver-resolution.log logs/controller-driver-resolution.log
-          bash -n PKGBUILD
 
       - name: Resolve official SteamOS 7.2 source and Arch config
         run: |
@@ -117,10 +105,6 @@ jobs:
           grep -Eq '^_tag=7\.2' PKGBUILD
           grep -Fq 'CONFIG_RTW89_USB=m' config-neptune
           grep -Fq 'CONFIG_ZSWAP_DEFAULT_ON=y' config-neptune
-          grep -Fq 'CONFIG_ZRAM_MULTI_COMP=y' config-charcoal
-          grep -Fq 'CONFIG_ZRAM_DEF_COMP_LZ4=y' config-charcoal
-          grep -Fq 'params->level = -1;' latest-zram-ir.patch
-          grep -Fq 'sysctl_zram_recomp_immediate = 1' latest-zram-ir.patch
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -130,8 +114,6 @@ jobs:
               'latest-bore.patch',
               'latest-bore-sched-ext-coexistence-fix.patch',
               'latest-poc-selector.patch',
-              'latest-adios.patch',
-              'latest-adios-default.patch',
           ]
           positions = [pkgbuild.index(name) for name in required_order]
           assert positions == sorted(positions), positions
@@ -141,12 +123,10 @@ jobs:
           assert lock['kernel']['version'].startswith('7.2'), lock['kernel']
           assert lock['kernel']['tag'].startswith('7.2'), lock['kernel']
           expected = {
-              'lru_cast', 'zram_ir', 'adios', 'bore',
-              'bore_sched_ext_coexistence', 'poc_selector', 'nap',
+              'lru_cast', 'bore',
+              'bore_sched_ext_coexistence', 'poc_selector',
           }
           assert set(lock['components']) == expected
-          assert lock['components']['zram_ir']['origin'] == 'local-port'
-          assert lock['components']['zram_ir']['path'] == '0001-linux7.2-zram-ir-1.2.patch'
           allowed_origins = {
               'upstream-native', 'upstream-kernel-agnostic',
               'local-port', 'adaptive-port', 'upstream-fixed',

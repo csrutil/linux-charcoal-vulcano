@@ -12,8 +12,6 @@ PATCH_ORDER = [
     "latest-bore.patch",
     "latest-bore-sched-ext-coexistence-fix.patch",
     "latest-poc-selector.patch",
-    "latest-adios.patch",
-    "latest-adios-default.patch",
 ]
 
 
@@ -78,55 +76,6 @@ def reorder_patches(text: str) -> str:
     ordered = [found[name] for name in PATCH_ORDER]
     retained[insert_at:insert_at] = ordered
     return text[:start] + "".join(retained) + text[end:]
-
-
-def wire_adios_72_port(text: str) -> str:
-    """Use the explicit latest-upstream ADIOS elevator port only in the 7.2 build.
-
-    The production PKGBUILD has a full if/elif patch dispatcher, while unit-test
-    fixtures intentionally use a compact one-line POC branch. Support both
-    shapes without weakening validation of the production path.
-    """
-    if "port-adios-7.2.py" in text:
-        return text
-
-    production_anchor = (
-        '    elif [[ $src == latest-libbpf-uninitialized.patch ]]; then\n'
-    )
-    production_branch = (
-        '    elif [[ $src == latest-adios.patch ]]; then\n'
-        '      local adapted_adios="../${src%.patch}-7.2-port.patch"\n'
-        '      python3 "$startdir/automation/port-adios-7.2.py" \\\n'
-        '        "../$src" "$adapted_adios" block/elevator.c\n'
-        '      git apply --check "$adapted_adios"\n'
-        '      git apply "$adapted_adios"\n'
-    )
-    if text.count(production_anchor) == 1:
-        return text.replace(
-            production_anchor, production_branch + production_anchor, 1
-        )
-
-    compact_pattern = re.compile(
-        r"(?m)^(?P<indent>\s*)if \[\[ \$src == "
-        r"latest-poc-selector\.patch \]\]; then :; fi\s*$"
-    )
-    match = compact_pattern.search(text)
-    if not match:
-        raise TransformError(
-            "prepare() dispatcher changed; cannot wire explicit ADIOS 7.2 port"
-        )
-
-    indent = match.group("indent")
-    compact_branch = (
-        f"\n{indent}if [[ $src == latest-adios.patch ]]; then\n"
-        f'{indent}  local adapted_adios="../${{src%.patch}}-7.2-port.patch"\n'
-        f'{indent}  python3 "$startdir/automation/port-adios-7.2.py" \\\n'
-        f'{indent}    "../$src" "$adapted_adios" block/elevator.c\n'
-        f'{indent}  git apply --check "$adapted_adios"\n'
-        f'{indent}  git apply "$adapted_adios"\n'
-        f"{indent}fi"
-    )
-    return text[: match.end()] + compact_branch + text[match.end() :]
 
 
 def wire_zen_02_72_port(text: str) -> str:
@@ -225,7 +174,6 @@ def transform(text: str) -> str:
     text = replace_assignment(text, "_nepbase", "linux-neptune-72")
     text = replace_assignment(text, "_tag", BOOTSTRAP_TAG)
     text = reorder_patches(text)
-    text = wire_adios_72_port(text)
     text = wire_zen_02_72_port(text)
     return text
 
@@ -244,10 +192,6 @@ def validate(text: str) -> None:
         raise TransformError("mandatory patch order is invalid")
     if text.count("latest-poc-selector.patch") != 2:
         raise TransformError("unexpected POC selector reference count")
-    if text.count("latest-adios.patch") != 2:
-        raise TransformError("unexpected ADIOS reference count")
-    if text.count("port-adios-7.2.py") != 1:
-        raise TransformError("explicit ADIOS 7.2 port is not wired exactly once")
     if text.count("latest-zen-02.patch") != 2:
         raise TransformError("unexpected Zen cpufreq reference count")
     if text.count("port-zen-cpufreq-7.2.py") != 1:

@@ -449,9 +449,13 @@ def resolve_kernel_tag(
 def repository_tree(repo: str, branch: str, token: str | None) -> tuple[str, dict[str, Any]]:
     key = (repo, branch)
     if key not in _TREE_CACHE:
-        encoded = urllib.parse.quote(branch, safe="")
-        branch_data = request_json(f"{API}/repos/{repo}/branches/{encoded}", token)
-        commit = branch_data["commit"]["sha"]
+        if re.fullmatch(r"[0-9a-f]{40}", branch):
+            # A full commit SHA pins the search to that exact upstream tree.
+            commit = branch
+        else:
+            encoded = urllib.parse.quote(branch, safe="")
+            branch_data = request_json(f"{API}/repos/{repo}/branches/{encoded}", token)
+            commit = branch_data["commit"]["sha"]
         tree = request_json(f"{API}/repos/{repo}/git/trees/{commit}?recursive=1", token)
         if tree.get("truncated"):
             raise ResolveError(

@@ -68,7 +68,7 @@ class IntegrityTests(unittest.TestCase):
             lock = {'kernel': {'version': kernel, 'tag': tag}, 'components': {'bore': {'sha256': 'a' * 64, 'project_version': '6.9.0'}}}
             result = notes.render('stable', lock, version, tag, 'kernel.zip', 'charcoal-' + version + '-r1', 'abc', '1')
             self.assertIn(kernel, result)
-            self.assertIn('Latest', result)
+            self.assertIn('Applied patches and selected versions', result)
             with self.assertRaises(ValueError):
                 notes.render('stable', lock, version, tag, 'kernel.zip', 'charcoal-6.18.1-r1', 'abc', '1')
 

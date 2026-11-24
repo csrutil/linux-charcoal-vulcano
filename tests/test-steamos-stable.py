@@ -34,10 +34,10 @@ class StableTrackingTests(unittest.TestCase):
                 self.assertTrue(record['source_index'].endswith(repo + '/'))
                 self.assertEqual(record['pkgbase'], 'linux-charcoal-' + suffix)
                 self.assertTrue(record['package']['url'].endswith(f'linux-neptune-{suffix}-{kernel}.valve2-2.src.tar.gz'))
-                self.assertEqual(overrides['components']['zram_ir']['port_for_kernel'], series)
+                self.assertEqual(overrides['components']['poc_selector']['port_for_kernel'], series)
                 # No family or reviewed port may disappear during a series transition.
                 self.assertEqual(set(overrides['components']), set(policy['components']))
-                self.assertEqual(overrides['components']['zram_ir']['local_port'], policy['components']['zram_ir']['local_port'])
+                self.assertEqual(overrides['components']['poc_selector']['adaptive_port'], policy['components']['poc_selector']['adaptive_port'])
 
     def test_never_uses_preview_as_stable(self):
         for branch in ('main', 'beta', 'preview'):

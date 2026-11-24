@@ -1,43 +1,42 @@
-# Zswap e swapfile na partição home
+# Zswap and a swapfile on the home partition
 
-A instalação usa `zswap.enabled=1`, `zswap.max_pool_percent=35`,
-`zswap.shrinker_enabled=1`, `zswap.compressor=zstd` e allocator `zsmalloc`.
-O argumento `zswap.zpool=zsmalloc` é preservado para kernels antigos; os
-atuais já usam zsmalloc diretamente e não oferecem esse seletor por sysfs.
+The installation uses `zswap.enabled=1`, `zswap.max_pool_percent=35`,
+`zswap.shrinker_enabled=1`, `zswap.compressor=zstd` and the `zsmalloc` allocator.
+The `zswap.zpool=zsmalloc` argument is kept for older kernels; current kernels
+use zsmalloc directly and do not offer that selector in sysfs.
 
-O pacote cria `/home/.gaming-swap/swapfile` na partição que contém `/home`,
-com 100% de `MemTotal`, arredondado para páginas inteiras. O diretório é
-exclusivo de root (0700) e o arquivo tem permissão 0600. Em Btrfs, usa um
-subvolume separado e `btrfs filesystem mkswapfile`, sem CoW nem buracos,
-validando o mapeamento antes do `swapon`. Também suporta ext4 e XFS.
+The package creates `/home/.gaming-swap/swapfile` on the partition that holds
+`/home`, sized to 100% of `MemTotal`, rounded to whole pages. The folder is
+root-only (0700) and the file has mode 0600. On Btrfs it uses a separate
+subvolume and `btrfs filesystem mkswapfile`, without CoW or holes, and checks
+the mapping before `swapon`. ext4 and XFS are also supported.
 
-O arquivo novo é ativado antes de drenar e remover os swapfiles anteriores.
-Eles são identificados pelos swaps ativos, fstab, unidades de swap e caminhos
-convencionais, incluindo swapfiles antigos já inativos em diretórios usuais e nas
-pastas de usuários em `/home`. A migração só termina após **excluir fisicamente**
-os arquivos antigos e verificar que não existem mais. Arquivos sem assinatura
-de swap não são apagados. Partições
-de swap são preservadas. Espaço insuficiente, layout Btrfs inválido ou falha
-de `swapoff` interrompem a migração e preservam os arquivos antigos.
-A criação requer espaço para o novo arquivo mais 1 GiB de reserva, além do
-swap antigo ainda existente. Atualizações reutilizam o arquivo com o tamanho
-correto; uma mudança na RAM cria outro nome dentro do mesmo diretório.
+The new file is turned on before the previous swapfiles are drained and removed.
+They are found from active swaps, fstab, swap units and usual paths, including
+old inactive swapfiles in usual folders and in user folders under `/home`. The
+migration only finishes after it **physically deletes** the old files and checks
+that they are gone. Files without a swap signature are not deleted. Swap
+partitions are kept. Not enough space, an invalid Btrfs layout or a `swapoff`
+failure stops the migration and keeps the old files.
+Creating the file needs free space for the new file plus a 1 GiB reserve, in
+addition to the old swap that still exists. Updates reuse a file of the correct
+size; a RAM change creates another name in the same folder.
 
-A persistência usa `/etc/fstab`, parâmetros do GRUB, modprobe, desativação do
-zram-generator e máscaras dos serviços zram detectados, incluindo SteamOS.
-`gaming-zswap.service` reaplica os parâmetros por sysfs em cada boot.
-O arquivo `/etc/tmpfiles.d/zswap-disable.conf` aponta para `/dev/null`,
-neutralizando a regra SteamOS de mesmo nome que desativa zswap depois do
-serviço. Uma configuração local anterior é preservada como
+Persistence uses `/etc/fstab`, GRUB parameters, modprobe, a disabled
+zram-generator and masks for the zram services found, including SteamOS's.
+`gaming-zswap.service` applies the parameters again through sysfs at every boot.
+The file `/etc/tmpfiles.d/zswap-disable.conf` points to `/dev/null`, which
+cancels the SteamOS rule of the same name that turns zswap off after the
+service. A previous local configuration is kept as
 `zswap-disable.conf.gaming-swap.bak`.
-As configurações próprias do LRU CAST são preservadas. A migração ocorre
-no sistema instalado, nunca no ambiente de compilação do pacote.
+LRU CAST's own settings are kept. The migration runs on the installed system,
+never in the package build environment.
 
-As configurações persistem entre reinícios e reinstalações do kernel.
-Uma atualização de imagem SteamOS que substitua configurações ou pacotes
-exige reinstalar o kernel/tuning. O script não configura hibernação.
+The settings stay across reboots and kernel reinstalls.
+A SteamOS image update that replaces settings or packages requires installing
+the kernel/tuning again. The script does not set up hibernation.
 
-Após reiniciar, confira:
+After a reboot, check:
 
 ```bash
 swapon --show
@@ -45,9 +44,9 @@ cat /sys/module/zswap/parameters/{enabled,max_pool_percent,shrinker_enabled,comp
 systemctl status gaming-zswap.service
 ```
 
-`swapon --show` deve listar o arquivo em `/home/.gaming-swap` e não listar
-`/dev/zram*`. Os parâmetros devem mostrar `Y`, `35`, `Y` e `zstd`.
-Se a instalação falhar, corrija o erro indicado e execute novamente:
+`swapon --show` must list the file in `/home/.gaming-swap` and must not list
+`/dev/zram*`. The parameters must show `Y`, `35`, `Y` and `zstd`.
+If the installation fails, fix the reported error and run again:
 
 ```bash
 sudo /usr/lib/gaming-swap/configure

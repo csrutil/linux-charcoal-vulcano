@@ -9,10 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
-    for folder in ('automation', 'tests', 'nap-tools'):
+    for folder in ('automation', 'tests'):
         for path in (ROOT / folder).rglob('*.py'):
             py_compile.compile(str(path), doraise=True)
-    for path in [ROOT / 'PKGBUILD', ROOT / 'install-charcoal.sh', ROOT / 'configure-zram-ir', ROOT / 'docker/setup.sh']:
+    for path in [ROOT / 'PKGBUILD', ROOT / 'install-charcoal.sh', ROOT / 'automation/download-release.sh', ROOT / 'docker/setup.sh']:
         subprocess.run(['bash', '-n', str(path)], cwd=ROOT, check=True)
     files = sorted((ROOT / 'tests').glob('test*.py'))
     for path in files:
