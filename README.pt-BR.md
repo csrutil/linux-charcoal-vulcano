@@ -50,7 +50,31 @@ Releases estáveis usam `draft = false`, `prerelease = false`, `latest = true`. 
 
 Os assets incluem kernel/headers, ZIP, checksums, lock de patches e metadados da fonte estável. As notas vêm do lock validado daquele build. O ZIP também contém lock, metadados e auditoria de checksums.
 
-A `kernel-7.2` permanece apenas para builds manuais de desenvolvimento. [build-kernel-7.2.yml](.github/workflows/build-kernel-7.2.yml) não tem gatilho push/schedule nem publicação de releases; disponibiliza artefatos. Não recebe mais o disparo diário.
+A ### Artefatos do build
+
+Cada build envia um artefato chamado `linux-charcoal-7.2-<número da execução>`, mantido por 14 dias. Builds de pull request só geram esse artefato; não publicam release. Baixe para `~/Downloads`:
+
+```bash
+gh run download <id da execução> --repo csrutil/linux-charcoal-vulcano \
+  -n linux-charcoal-7.2-<número da execução> -D ~/Downloads/linux-charcoal-7.2-<número da execução>
+```
+
+| Arquivo | Tamanho (execução 3) | O que é |
+|---|---|---|
+| `linux-charcoal-72-<pkgver>-<pkgrel>-x86_64.pkg.tar.zst` | 105 MB | O pacote do kernel |
+| `linux-charcoal-72-headers-<pkgver>-<pkgrel>-x86_64.pkg.tar.zst` | 40 MB | Headers, necessários só para compilar módulos extras |
+| `linux-charcoal-72-<pkgver>-r<número da execução>.zip` | 145 MB | Os dois pacotes em um arquivo |
+| `RELEASE-ZIP-SHA256SUM` | — | Checksum do zip |
+| `logs/` | — | Logs do build, patch lock e checksums dos pacotes (`logs/SHA256SUMS`) |
+
+Na execução 3, `<pkgver>-<pkgrel>` é `7.2.7.valve2.cc2-1`. O Deck precisa dos dois arquivos `.pkg.tar.zst`; o zip contém os mesmos pacotes. Confira os arquivos antes de instalar (no Linux, use `sha256sum -c`):
+
+```bash
+shasum -a 256 -c RELEASE-ZIP-SHA256SUM
+grep 'pkg\.tar\.zst' logs/SHA256SUMS | shasum -a 256 -c -
+```
+
+`kernel-7.2` permanece apenas para builds manuais de desenvolvimento. [build-kernel-7.2.yml](.github/workflows/build-kernel-7.2.yml) não tem gatilho push/schedule nem publicação de releases; disponibiliza artefatos. Não recebe mais o disparo diário.
 
 Preparação local com Python 3, Bash e Git:
 

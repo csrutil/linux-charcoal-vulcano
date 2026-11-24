@@ -50,6 +50,30 @@ Stable releases use `draft = false`, `prerelease = false`, `latest = true`. Both
 
 Assets include kernel and headers, the ZIP, checksums, patch lock and stable-source metadata. Release notes are generated from that build's validated lock. The ZIP also carries the patch lock, source metadata and checksum audit.
 
+### Build artifacts
+
+Every build uploads one artifact named `linux-charcoal-7.2-<run number>`, kept for 14 days. Pull request builds only produce this artifact; they do not publish a release. Download it into `~/Downloads`:
+
+```bash
+gh run download <run id> --repo csrutil/linux-charcoal-vulcano \
+  -n linux-charcoal-7.2-<run number> -D ~/Downloads/linux-charcoal-7.2-<run number>
+```
+
+| File | Size (run 3) | What it is |
+|---|---|---|
+| `linux-charcoal-72-<pkgver>-<pkgrel>-x86_64.pkg.tar.zst` | 105 MB | The kernel package |
+| `linux-charcoal-72-headers-<pkgver>-<pkgrel>-x86_64.pkg.tar.zst` | 40 MB | Headers, only needed to build extra modules |
+| `linux-charcoal-72-<pkgver>-r<run number>.zip` | 145 MB | Both packages in one bundle |
+| `RELEASE-ZIP-SHA256SUM` | — | Checksum for the zip |
+| `logs/` | — | Build logs, patch lock and package checksums (`logs/SHA256SUMS`) |
+
+For run 3, `<pkgver>-<pkgrel>` is `7.2.7.valve2.cc2-1`. The Deck needs the two `.pkg.tar.zst` files; the zip holds the same packages. Check the files before you install them (use `sha256sum -c` on Linux):
+
+```bash
+shasum -a 256 -c RELEASE-ZIP-SHA256SUM
+grep 'pkg\.tar\.zst' logs/SHA256SUMS | shasum -a 256 -c -
+```
+
 `kernel-7.2` is retained for manual development builds only. [build-kernel-7.2.yml](.github/workflows/build-kernel-7.2.yml) has no push/schedule trigger or release publication steps; it uploads artifacts. It is no longer dispatched by the daily workflow.
 
 For local preparation with Python 3, Bash and Git:
