@@ -32,34 +32,34 @@ def get_lock(path: Path) -> dict:
 
 
 def format_components(components: dict) -> list[str]:
-    lines = ["| Componente | Versão do patch | Série upstream | Seleção / origem |", "|---|---|---|---|"]
+    lines = ["| Component | Patch version | Upstream series | Selection / origin |", "|---|---|---|---|"]
     details: list[str] = []
     for name, info in sorted(components.items()):
         if not isinstance(info, dict) or not SHA256_RE.fullmatch(str(info.get("sha256", ""))):
             raise ValueError(f"invalid patch SHA256 metadata: {name}")
         label = PATCH_LABELS.get(name, name.replace("_", " "))
-        version = info.get("project_version") or "não registrada (consultar arquivo)"
-        kernel_variant = info.get("kernel_version") or info.get("kernel_target") or "genérica / não declarada"
-        selection = info.get("selection") or info.get("origin") or "não declarada"
+        version = info.get("project_version") or "not recorded (see the patch file)"
+        kernel_variant = info.get("kernel_version") or info.get("kernel_target") or "generic / not declared"
+        selection = info.get("selection") or info.get("origin") or "not declared"
         lines.append(f"| **{safe(label)}** | `{safe(version)}` | `{safe(kernel_variant)}` | {safe(selection)} |")
-        path = info.get("selected_path") or info.get("path") or info.get("url") or "sem caminho"
+        path = info.get("selected_path") or info.get("path") or info.get("url") or "no path"
         details.extend([
-            f"**{safe(label)}** — fonte `{safe(path)}`",
-            f"- SHA256 selecionado: `{info['sha256']}`",
+            f"**{safe(label)}** — source `{safe(path)}`",
+            f"- Selected SHA256: `{info['sha256']}`",
         ])
-        for key, heading in (("commit", "Commit upstream"), ("latest_upstream_project_version", "Revisão global mais recente")):
+        for key, heading in (("commit", "Upstream commit"), ("latest_upstream_project_version", "Newest upstream revision")):
             if info.get(key):
                 details.append(f"- {heading}: `{safe(info[key])}`")
         if isinstance(info.get("compatibility_reference"), dict):
             ref = info["compatibility_reference"]
-            details.append(f"- Referência para porte: `{safe(ref.get('kernel_version', '?'))}` / `{safe(ref.get('project_version', '?'))}`")
+            details.append(f"- Port reference: `{safe(ref.get('kernel_version', '?'))}` / `{safe(ref.get('project_version', '?'))}`")
         if isinstance(info.get("upstream"), dict):
             ref = info["upstream"]
-            details.append(f"- Referência de porte local: `{safe(ref.get('repository', '?'))}/{safe(ref.get('path', '?'))}` @ `{safe(ref.get('commit', '?'))}`")
+            details.append(f"- Local port reference: `{safe(ref.get('repository', '?'))}/{safe(ref.get('path', '?'))}` @ `{safe(ref.get('commit', '?'))}`")
         if info.get("upstream_sha256"):
-            details.append(f"- SHA256 original antes do porte: `{safe(info['upstream_sha256'])}`")
+            details.append(f"- Original SHA256 before the port: `{safe(info['upstream_sha256'])}`")
         details.append("")
-    return lines + ["", "<details>", "<summary>Proveniência e SHA256 completos de cada patch</summary>", ""] + details + ["</details>"]
+    return lines + ["", "<details>", "<summary>Full source and SHA256 of every patch</summary>", ""] + details + ["</details>"]
 
 
 def render(mode: str, lock: dict, package_version: str, kernel_tag: str, zip_name: str, release_tag: str, sha: str, run_id: str) -> str:
@@ -80,27 +80,26 @@ def render(mode: str, lock: dict, package_version: str, kernel_tag: str, zip_nam
     lines = [
         f"# Charcoal — SteamOS {'Preview' if mode == 'preview' else 'Stable'} / Linux {series} — {safe(package_version)}",
         "",
-        "## Kernel e publicação",
-        f"- **Kernel Valve (fonte):** `{safe(kernel_tag)}` — Linux `{safe(kernel['version'])}`.",
-        f"- **Versão do pacote:** `{safe(package_version)}`; **tag desta publicação:** `{safe(release_tag)}`.",
-        f"- **Linha:** `{'kernel-7.2' if mode == 'preview' else 'master'}`; **commit do build:** `{safe(sha)}`; **workflow run:** `{safe(run_id)}`.",
-        "- **Tipo:** `draft=false`, `prerelease=true`, **não Latest**." if mode == "preview" else "- **Tipo:** `draft=false`, `prerelease=false`, **Latest estável**.",
+        "## Kernel and build",
+        f"- **Valve kernel (source):** `{safe(kernel_tag)}` — Linux `{safe(kernel['version'])}`.",
+        f"- **Package version:** `{safe(package_version)}`; **bundle tag:** `{safe(release_tag)}`.",
+        f"- **Build commit:** `{safe(sha)}`; **workflow run:** `{safe(run_id)}`.",
         "",
-        "## Patches aplicados e versões selecionadas",
-        "Versões e origens abaixo são lidas do `patch-lock.json` validado **nesta execução**, não de valores fixos no workflow.",
+        "## Applied patches and selected versions",
+        "The versions and origins below come from the `patch-lock.json` validated **in this run**, not from fixed values in the workflow.",
         "",
         *format_components(lock["components"]),
     ]
-    for group, heading in (("auxiliary_components", "Componentes auxiliares"),):
+    for group, heading in (("auxiliary_components", "Auxiliary components"),):
         if lock.get(group):
             lines.extend(["", f"## {heading}", "", *format_components(lock[group])])
     lines.extend([
-        "", "## Artefatos e auditoria", f"- ZIP: `{safe(zip_name)}`.",
-        "- Consulte o `patch-lock.json` da execução e os arquivos SHA256 dos artefatos para verificar os bytes realmente utilizados.",
-        "- Os drivers e módulos adicionais são validados nos logs do build; não atribuímos versão a um driver ausente no lock de patches.",
+        "", "## Artifacts and audit", f"- ZIP: `{safe(zip_name)}`.",
+        "- Use this run's `patch-lock.json` and the artifact SHA256 files to check the exact bytes that were used.",
+        "- Extra drivers and modules are checked in the build logs; a driver that is not in the patch lock gets no version here.",
     ])
     if mode == "preview":
-        lines.append("- Preview é prerelease isolada, descoberta pelo instalador somente por `charcoal-7.2-preview-*`; não altera a release Latest estável.")
+        lines.append("- Preview is a separate pre-release that the installer only finds by `charcoal-7.2-preview-*`; it does not change the Latest stable release.")
     return "\n".join(lines) + "\n"
 
 
